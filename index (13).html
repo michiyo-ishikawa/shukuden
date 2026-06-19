@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>祝電管理システム</title>
+<link rel="manifest" href="manifest.json">
+<style>
+/* ═══════════════════════════════════════
+   デザイントークン
+═══════════════════════════════════════ */
+:root {
+  --navy:      #1e2d40;
+  --navy-lt:   #2e4057;
+  --gold:      #c9a84c;
+  --cream:     #faf8f4;
+  --white:     #ffffff;
+  --g100:      #f4f2ee;
+  --g200:      #e8e4dc;
+  --g400:      #b0a898;
+  --g600:      #6e6658;
+  --g800:      #3a3530;
+  --red:       #c0392b;
+  --red-bg:    #fdf0ee;
+  --green:     #27735a;
+  --green-bg:  #eef7f3;
+  --shadow-sm: 0 1px 4px rgba(30,45,64,.08);
+  --shadow-md: 0 4px 16px rgba(30,45,64,.12);
+  --r:         10px;
+  --r-sm:      6px;
+}
+
+/* ═══════════════════════════════════════
+   リセット・ベース
+═══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  background: var(--cream);
+  color: var(--g800);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════
+   ヘッダー
+═══════════════════════════════════════ */
+header {
+  background: var(--navy);
+  color: var(--white);
+  padding: 0 20px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.header-actions { display: flex; gap: 8px; }
+.btn-icon {
+  background: rgba(255,255,255,.12);
+  border: none;
+  color: var(--white);
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.btn-icon:hover { background: rgba(255,255,255,.22); }
+
+/* ═══════════════════════════════════════
+   アラートバナー
+═══════════════════════════════════════ */
+#alert-banner {
+  background: linear-gradient(135deg, #7b1a1a, var(--red));
+  color: white;
+  padding: 12px 20px;
+  display: none;
+}
+#alert-banner.show { display: block; }
+.alert-inner { max-width: 900px; margin: 0 auto; }
+.alert-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.alert-items { font-size: 13px; }
+.alert-item { padding: 2px 0; }
+
+/* ═══════════════════════════════════════
+   メインレイアウト
+═══════════════════════════════════════ */
+main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
+
+/* ═══════════════════════════════════════
+   統計バー
+═══════════════════════════════════════ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--white);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid var(--g200);
+}
+.stat-card.urgent { border-left-color: var(--red); }
+.stat-card.pending { border-left-color: var(--gold); }
+.stat-card.done   { border-left-color: var(--green); }
+.stat-num   { font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--g600); margin-top: 2px; }
+
+/* ═══════════════════════════════════════
+   コントロール
+═══════════════════════════════════════ */
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.search-box { flex: 1; min-width: 180px; position: relative; }
+.search-box input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1.5px solid var(--g200);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  background: var(--white);
+  outline: none;
+  transition: border-color .15s;
+}
+.search-box input:focus { border-color: var(--navy-lt); }
+.search-icon {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--g400); font-size: 16px; pointer-events: none;
+}
+select {
+  padding: 9px 12px;
+  border: 1.5px solid var(--g200);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  background: var(--white);
+  outline: none;
+  cursor: pointer;
+}
+.btn {
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.btn:hover { opacity: .85; }
+.btn-primary   { background: var(--navy);  color: var(--white); }
+.btn-secondary { background: var(--g100);  color: var(--g800); border: 1.5px solid var(--g200); }
+.btn-green     { background: var(--green); color: var(--white); }
+.btn-danger    { background: var(--red-bg); color: var(--red); border: 1.5px solid #f0c0bc; margin-right: auto; }
+
+/* ═══════════════════════════════════════
+   カードリスト
+═══════════════════════════════════════ */
+.card-list { display: flex; flex-direction: column; gap: 10px; }
+.shinden-card {
+  background: var(--white);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--g200);
+  overflow: hidden;
+  transition: box-shadow .15s, border-color .15s;
+}
+.shinden-card:hover { box-shadow: var(--shadow-md); border-color: var(--g400); }
+.shinden-card.delivered { opacity: .6; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+  cursor: pointer;
+}
+.card-icon {
+  width: 44px; height: 44px;
+  border-radius: var(--r-sm);
+  background: var(--g100);
+  border: 1px solid var(--g200);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0; color: var(--g400);
+}
+.card-body { flex: 1; min-width: 0; }
+.card-title {
+  font-size: 14px; font-weight: 700; color: var(--navy);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-sub { font-size: 12px; color: var(--g600); margin-top: 2px; }
+.card-meta { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+
+/* バッジ */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-pending   { background: #fff3cd; color: #7a5800; }
+.badge-delivered { background: var(--green-bg); color: var(--green); }
+.badge-urgent    { background: var(--red-bg); color: var(--red); }
+.badge-soon      { background: #fff3cd; color: #7a5800; }
+.badge-date      { background: var(--g100); color: var(--g600); }
+
+.card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.btn-deliver {
+  background: var(--green); color: white;
+  border: none; padding: 6px 12px;
+  border-radius: var(--r-sm); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: opacity .15s;
+}
+.btn-deliver:hover { opacity: .85; }
+.btn-deliver.done { background: var(--g200); color: var(--g600); }
+.btn-edit-card {
+  background: none; border: 1.5px solid var(--g200);
+  color: var(--g600); width: 30px; height: 30px;
+  border-radius: var(--r-sm); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-edit-card:hover { border-color: var(--navy-lt); color: var(--navy); }
+
+/* カード詳細 */
+.card-detail {
+  display: none;
+  padding: 0 16px 14px 72px;
+  border-top: 1px solid var(--g100);
+  background: var(--g100);
+}
+.card-detail.open { display: block; }
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  font-size: 12px;
+  padding-top: 10px;
+}
+.detail-row { display: flex; gap: 6px; }
+.detail-label { color: var(--g600); min-width: 70px; flex-shrink: 0; }
+.detail-value { color: var(--g800); }
+.detail-note {
+  margin-top: 8px; font-size: 12px; color: var(--g600);
+  background: var(--white); padding: 8px 10px;
+  border-radius: var(--r-sm); border: 1px solid var(--g200);
+}
+
+/* ═══════════════════════════════════════
+   空状態
+═══════════════════════════════════════ */
+.empty { text-align: center; padding: 60px 20px; color: var(--g400); }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ═══════════════════════════════════════
+   モーダル共通
+═══════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(20,30,44,.55);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 14px;
+  width: 100%; max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(20,30,44,.3);
+}
+.modal-header {
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--g200);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-size: 16px; font-weight: 700; color: var(--navy); }
+.btn-close { background: none; border: none; font-size: 22px; color: var(--g400); cursor: pointer; line-height: 1; }
+.modal-body { padding: 16px 20px; }
+.modal-footer {
+  padding: 12px 20px 18px;
+  display: flex; gap: 10px; justify-content: flex-end;
+  border-top: 1px solid var(--g100);
+}
+
+/* フォーム */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--navy-lt); margin-bottom: 5px; }
+.form-group label .req { color: var(--red); margin-left: 3px; }
+.form-group input[type=text],
+.form-group input[type=date],
+.form-group textarea,
+.form-group select {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--g200); border-radius: var(--r-sm);
+  font-size: 13px; font-family: inherit; outline: none;
+  transition: border-color .15s; background: var(--white);
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus { border-color: var(--navy-lt); }
+.form-group textarea { resize: vertical; min-height: 70px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* エクスポートモーダル */
+.export-info {
+  font-size: 12px; color: var(--g600); margin-top: 4px;
+  padding: 8px 10px; background: var(--g100); border-radius: var(--r-sm);
+}
+
+/* ローディング */
+#loading {
+  position: fixed; inset: 0; background: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999; flex-direction: column; gap: 12px;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--g200); border-top-color: var(--navy);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════
+   レスポンシブ
+═══════════════════════════════════════ */
+@media (max-width: 600px) {
+  .stat-num { font-size: 22px; }
+  .form-row { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .card-detail { padding-left: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ローディング -->
+<div id="loading">
+  <div class="spinner"></div>
+  <span style="font-size:13px;color:var(--g600)">接続中...</span>
+</div>
+
+<!-- ヘッダー -->
+<header>
+  <div class="header-title">
+    <span>📬</span>
+    祝電管理システム
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="openAddModal()" title="祝電を登録">＋</button>
+  </div>
+</header>
+
+<!-- アラートバナー -->
+<div id="alert-banner">
+  <div class="alert-inner">
+    <div class="alert-title">⚠️ 本日・明日に開催予定の宴席があります</div>
+    <div class="alert-items" id="alert-items"></div>
+  </div>
+</div>
+
+<!-- メイン -->
+<main>
+  <div class="stats">
+    <div class="stat-card urgent">
+      <div class="stat-num" id="stat-urgent">0</div>
+      <div class="stat-label">本日・明日開催</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-num" id="stat-pending">0</div>
+      <div class="stat-label">未お届け</div>
+    </div>
+    <div class="stat-card done">
+      <div class="stat-num" id="stat-done">0</div>
+      <div class="stat-label">お届け済み</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="宴席名・差出人で検索..." oninput="renderList()">
+    </div>
+    <select id="filter-status" onchange="renderList()">
+      <option value="all">すべて</option>
+      <option value="pending">未お届け</option>
+      <option value="delivered">お届け済み</option>
+    </select>
+    <button class="btn btn-primary" onclick="openAddModal()">＋ 祝電を登録</button>
+    <button class="btn btn-green" onclick="openExportModal()">📊 Excel出力</button>
+  </div>
+
+  <div class="card-list" id="card-list">
+    <div class="empty">
+      <div class="empty-icon">📭</div>
+      <div>祝電が登録されていません</div>
+    </div>
+  </div>
+</main>
+
+<!-- 登録・編集モーダル -->
+<div class="modal-overlay" id="form-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="form-title">祝電を登録</span>
+      <button class="btn-close" onclick="closeFormModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>到着日<span class="req">*</span></label>
+          <input type="date" id="f-arrival">
+        </div>
+        <div class="form-group">
+          <label>宴席開催日<span class="req">*</span></label>
+          <input type="date" id="f-event-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>宴席名（宛先）<span class="req">*</span></label>
+        <input type="text" id="f-event-name" placeholder="例：〇〇様ご結婚披露宴">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>差出人<span class="req">*</span></label>
+          <input type="text" id="f-sender" placeholder="例：株式会社〇〇 代表取締役">
+        </div>
+        <div class="form-group">
+          <label>受電者</label>
+          <input type="text" id="f-receiver" placeholder="例：〇〇 太郎">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>備考</label>
+        <textarea id="f-note" placeholder="特記事項があれば入力"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btn-delete" onclick="deleteRecord()" style="display:none">🗑 削除</button>
+      <button class="btn btn-secondary" onclick="closeFormModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveRecord()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV出力モーダル -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">📊 出力する宴席を選択</span>
+      <button class="btn-close" onclick="closeExportModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>出力対象</label>
+        <select id="export-select" onchange="updateExportPreview()"></select>
+      </div>
+      <div class="form-group">
+        <label>お届け状況</label>
+        <select id="export-status" onchange="updateExportPreview()">
+          <option value="all">すべて</option>
+          <option value="pending">未お届けのみ</option>
+          <option value="delivered">お届け済みのみ</option>
+        </select>
+      </div>
+      <div class="export-info" id="export-preview">対象件数：― 件</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeExportModal()">キャンセル</button>
+      <button class="btn btn-green" onclick="doExport()">📥 Excelダウンロード</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK + アプリロジック -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc,
+  doc, onSnapshot
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+/* ── Firebase設定 ── */
+const firebaseConfig = {
+  apiKey:        "AIzaSyDrKzmDJH_Tyo8Sf4asuuB3V0kyQC2bHDw",
+  authDomain:    "shukuden-6d61f.firebaseapp.com",
+  projectId:     "shukuden-6d61f",
+  storageBucket: "shukuden-6d61f.firebasestorage.app",
+  appId:         "1:97633612884:web:7d63775aba750608b729c1"
+};
+
+/* ── 初期化 ── */
+const app    = initializeApp(firebaseConfig);
+const db     = getFirestore(app);
+const colRef = collection(db, 'shinden');
+
+/* ── 状態 ── */
+let records   = [];
+let editingId = null;
+
+/* ── ユーティリティ ── */
+const localDateStr = (d = new Date()) => {
+  const y   = d.getFullYear();
+  const m   = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+const today     = () => localDateStr();
+const tomorrow  = () => { const d = new Date(); d.setDate(d.getDate() + 1); return localDateStr(d); };
+const addDays   = (dateStr, n) => { const d = new Date(dateStr); d.setDate(d.getDate() + n); return localDateStr(d); };
+const fmtDate   = s => { if (!s) return '—'; const [y, m, d] = s.split('-'); return `${y}年${m}月${d}日`; };
+const daysUntil = s => s ? Math.ceil((new Date(s) - new Date(today())) / 86400000) : null;
+
+/* ── データ監視 ── */
+onSnapshot(colRef, snap => {
+  records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  records.sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+  document.getElementById('loading').style.display = 'none';
+  updateStats();
+  checkAlerts();
+  renderList();
+  autoDeleteExpired();
+}, err => {
+  document.getElementById('loading').style.display = 'none';
+  alert('データ取得エラー: ' + err.message);
+});
+
+/* ── 自動削除：宴席日から14日経過したデータを削除 ── */
+async function autoDeleteExpired() {
+  const cutoff  = addDays(today(), -14);
+  const expired = records.filter(r => r.eventDate && r.eventDate < cutoff);
+  for (const r of expired) {
+    await deleteDoc(doc(db, 'shinden', r.id));
+  }
+}
+
+/* ── 統計更新 ── */
+function updateStats() {
+  const td = today(), tm = tomorrow();
+  document.getElementById('stat-urgent').textContent =
+    records.filter(r => !r.delivered && (r.eventDate === td || r.eventDate === tm)).length;
+  document.getElementById('stat-pending').textContent = records.filter(r => !r.delivered).length;
+  document.getElementById('stat-done').textContent    = records.filter(r =>  r.delivered).length;
+}
+
+/* ── アラート ── */
+function checkAlerts() {
+  const td = today(), tm = tomorrow();
+  const urgent = records.filter(r => !r.delivered && (r.eventDate === td || r.eventDate === tm));
+  const banner = document.getElementById('alert-banner');
+  if (!urgent.length) { banner.classList.remove('show'); return; }
+  banner.classList.add('show');
+  document.getElementById('alert-items').innerHTML = urgent.map(r =>
+    `<div class="alert-item">📌 ${r.eventName}（${fmtDate(r.eventDate)}）- ${r.sender} 様より ${r.eventDate === td ? '【本日】' : '【明日】'}</div>`
+  ).join('');
+}
+
+/* ── カードレンダリング ── */
+window.renderList = function() {
+  const q  = document.getElementById('search-input').value.toLowerCase();
+  const fs = document.getElementById('filter-status').value;
+  const list = records.filter(r => {
+    const matchText   = (r.eventName || '').toLowerCase().includes(q) || (r.sender || '').toLowerCase().includes(q);
+    const matchStatus = fs === 'all' ? true : fs === 'pending' ? !r.delivered : r.delivered;
+    return matchText && matchStatus;
+  });
+  const el = document.getElementById('card-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div>該当する祝電がありません</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(r => cardHTML(r)).join('');
+};
+
+function cardHTML(r) {
+  const days = daysUntil(r.eventDate);
+  let badge;
+  if (r.delivered)                    badge = `<span class="badge badge-delivered">✓ お届け済み</span>`;
+  else if (days === 0)                badge = `<span class="badge badge-urgent">🔴 本日開催</span>`;
+  else if (days === 1)                badge = `<span class="badge badge-soon">🟡 明日開催</span>`;
+  else if (days !== null && days < 0) badge = `<span class="badge badge-urgent">⚠ 期日超過</span>`;
+  else                                badge = `<span class="badge badge-pending">未お届け</span>`;
+
+  const deliverBtn = r.delivered
+    ? `<button class="btn-deliver done" onclick="toggleDeliver('${r.id}',false);event.stopPropagation()">✓ 済</button>`
+    : `<button class="btn-deliver" onclick="toggleDeliver('${r.id}',true);event.stopPropagation()">お届け</button>`;
+
+  return `<div class="shinden-card${r.delivered ? ' delivered' : ''}">
+    <div class="card-header" onclick="toggleDetail('${r.id}')">
+      <div class="card-icon">📄</div>
+      <div class="card-body">
+        <div class="card-title">${r.eventName || '宴席名未設定'}</div>
+        <div class="card-sub">${r.sender || '差出人未設定'} → ${r.receiver || '—'}</div>
+        <div class="card-meta">
+          ${badge}
+          <span class="badge badge-date">📅 ${fmtDate(r.eventDate)}</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        ${deliverBtn}
+        <button class="btn-edit-card" onclick="openEditModal('${r.id}');event.stopPropagation()">✏</button>
+      </div>
+    </div>
+    <div class="card-detail" id="detail-${r.id}">
+      <div class="detail-grid">
+        <div class="detail-row"><span class="detail-label">到着日</span><span class="detail-value">${fmtDate(r.arrivalDate)}</span></div>
+        <div class="detail-row"><span class="detail-label">宴席開催日</span><span class="detail-value">${fmtDate(r.eventDate)}</span></div>
+        <div class="detail-row"><span class="detail-label">差出人</span><span class="detail-value">${r.sender || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">受電者</span><span class="detail-value">${r.receiver || '—'}</span></div>
+      </div>
+      ${r.note ? `<div class="detail-note">📝 ${r.note}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ── カード操作 ── */
+window.toggleDetail  = id => document.getElementById('detail-' + id)?.classList.toggle('open');
+window.toggleDeliver = (id, val) => {
+  updateDoc(doc(db, 'shinden', id), { delivered: val })
+    .catch(e => console.error('更新エラー:', e));
+};
+
+/* ── フォームリセット ── */
+function resetForm() {
+  ['f-arrival','f-event-date','f-event-name','f-sender','f-receiver','f-note']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('btn-delete').style.display = 'none';
+}
+
+/* ── モーダル開閉 ── */
+window.openAddModal = function() {
+  editingId = null;
+  resetForm();
+  document.getElementById('f-arrival').value = today();
+  document.getElementById('form-title').textContent = '祝電を登録';
+  document.getElementById('form-modal').classList.add('open');
+};
+
+window.openEditModal = function(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  resetForm();
+  document.getElementById('f-arrival').value    = r.arrivalDate || '';
+  document.getElementById('f-event-date').value = r.eventDate   || '';
+  document.getElementById('f-event-name').value = r.eventName   || '';
+  document.getElementById('f-sender').value     = r.sender      || '';
+  document.getElementById('f-receiver').value   = r.receiver    || '';
+  document.getElementById('f-note').value       = r.note        || '';
+  document.getElementById('btn-delete').style.display = 'block';
+  document.getElementById('form-title').textContent = '祝電を編集';
+  document.getElementById('form-modal').classList.add('open');
+};
+
+window.closeFormModal = () => document.getElementById('form-modal').classList.remove('open');
+
+/* ── 保存 ── */
+window.saveRecord = function() {
+  const arrival   = document.getElementById('f-arrival').value;
+  const eventDate = document.getElementById('f-event-date').value;
+  const eventName = document.getElementById('f-event-name').value.trim();
+  const sender    = document.getElementById('f-sender').value.trim();
+  const receiver  = document.getElementById('f-receiver').value.trim();
+  const note      = document.getElementById('f-note').value.trim();
+
+  if (!arrival || !eventDate || !eventName || !sender) {
+    alert('到着日・宴席開催日・宴席名・差出人は必須です。');
+    return;
+  }
+  const data = { arrivalDate: arrival, eventDate, eventName, sender, receiver, note };
+
+  // awaitせず即座にモーダルを閉じ、Firestoreへの保存はバックグラウンドで実行
+  if (editingId) {
+    const current = records.find(r => r.id === editingId);
+    updateDoc(doc(db, 'shinden', editingId), { ...data, delivered: current?.delivered || false })
+      .catch(e => console.error('更新エラー:', e));
+  } else {
+    addDoc(colRef, { ...data, delivered: false, createdAt: today() })
+      .catch(e => console.error('保存エラー:', e));
+  }
+  window.closeFormModal();
+};
+
+/* ── 削除 ── */
+window.deleteRecord = function() {
+  if (!editingId || !confirm('この祝電を削除しますか？')) return;
+  deleteDoc(doc(db, 'shinden', editingId))
+    .catch(e => console.error('削除エラー:', e));
+  window.closeFormModal();
+};
+
+/* ── Excel出力 ── */
+window.openExportModal = function() {
+  if (!records.length) { alert('出力するデータがありません。'); return; }
+  const sel    = document.getElementById('export-select');
+  const events = [...new Set(records.map(r => r.eventName || '宴席名未設定'))].sort();
+  sel.innerHTML = '<option value="all">すべての宴席（全件）</option>' +
+    events.map(e => `<option value="${e}">${e}</option>`).join('');
+  updateExportPreview();
+  document.getElementById('export-modal').classList.add('open');
+};
+window.closeExportModal = () => document.getElementById('export-modal').classList.remove('open');
+
+window.updateExportPreview = function() {
+  document.getElementById('export-preview').textContent = `対象件数：${getExportRecords().length} 件`;
+};
+
+function getExportRecords() {
+  const eventVal  = document.getElementById('export-select').value;
+  const statusVal = document.getElementById('export-status').value;
+  return records.filter(r => {
+    const matchEvent  = eventVal === 'all' || (r.eventName || '宴席名未設定') === eventVal;
+    const matchStatus = statusVal === 'all' ? true : statusVal === 'pending' ? !r.delivered : r.delivered;
+    return matchEvent && matchStatus;
+  });
+}
+
+window.doExport = async function() {
+  const filtered = getExportRecords();
+  if (!filtered.length) { alert('該当するデータがありません。'); return; }
+
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    }).catch(() => {});
+  }
+  if (!window.XLSX) { alert('Excelライブラリの読み込みに失敗しました。'); return; }
+
+  const XLSX  = window.XLSX;
+  const fmtMD = s => { if (!s) return ''; const [,m, d] = s.split('-'); return `${m}/${d}`; };
+  const headers = ['到着日','宴席開催日','宴席名（宛先）','差出人','受電者','お届け状況','備考'];
+  const wsData  = [headers, ...filtered.map(r => [
+    fmtMD(r.arrivalDate), fmtMD(r.eventDate),
+    r.eventName || '', r.sender || '', r.receiver || '',
+    r.delivered ? 'お届け済み' : '未お届け', r.note || ''
+  ])];
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [8, 8, 28, 20, 12, 10, 20].map(w => ({ wch: w }));
+  ws['!rows'] = wsData.map(() => ({ hpt: 42.5 }));
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+    if (cell) cell.s = {
+      font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E2D40' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+    };
+  }
+  for (let R = 1; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+      if (cell) cell.s = {
+        font: { sz: 12 },
+        alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+        border: {
+          top:    { style: 'thin', color: { rgb: 'E8E4DC' } },
+          bottom: { style: 'thin', color: { rgb: 'E8E4DC' } },
+          left:   { style: 'thin', color: { rgb: 'E8E4DC' } },
+          right:  { style: 'thin', color: { rgb: 'E8E4DC' } }
+        }
+      };
+    }
+  }
+
+  const wb     = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '祝電一覧');
+  const eventVal = document.getElementById('export-select').value;
+  XLSX.writeFile(wb, `祝電一覧_${eventVal === 'all' ? '全件' : eventVal}_${today()}.xlsx`);
+  window.closeExportModal();
+};
+</script>
+</body>
+</html>
